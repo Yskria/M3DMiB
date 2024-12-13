@@ -164,7 +164,7 @@ city_edges, city_positions, city_edge_hover_texts = [], {}, []
 for _, row in city_pipe_main_valid.iterrows():
     city_positions[row['SegmentID']] = (row['Longitude'], row['Latitude'])
     corrosion_level = row['CorrosionLevel']
-    corrosion_color = corrosion_colors.get(corrosion_level, 'gray')  # Default to gray if no corrosion level
+    corrosion_color = corrosion_colors.get(corrosion_level, 'gray')
 
     if pd.notna(row['Parent Pipe']):
         parent_row = city_pipe_main_valid[city_pipe_main_valid['SegmentID'] == row['Parent Pipe']]
@@ -220,8 +220,8 @@ for edge, hover_text in zip(city_edges, city_edge_hover_texts):
         lon=[x_start, x_end],
         lat=[y_start, y_end],
         mode='lines',
-        line=dict(color=edge[2], width=5),  # Thicker solid lines for city pipes, colored based on corrosion level
-        text=hover_text, hoverinfo='text',  # Ensure text is shown on hover
+        line=dict(color=edge[2], width=5),
+        text=hover_text, hoverinfo='text',
         showlegend=False
     ))
 
@@ -249,8 +249,8 @@ for edge, hover_text in zip(service_edges, service_edge_hover_texts):
         lon=[x_start, x_end],
         lat=[y_start, y_end],
         mode='lines',
-        line=dict(color=edge[2], width=3),  # Thinner lines for service pipes, colored based on corrosion level
-        text=hover_text, hoverinfo='text',  # Ensure text is shown on hover
+        line=dict(color=edge[2], width=3),
+        text=hover_text, hoverinfo='text',
         showlegend=False
     ))
 
@@ -260,7 +260,7 @@ for edge, hover_text in zip(service_edges, service_edge_hover_texts):
             lon=[x],
             lat=[y],
             mode='text',
-            text="",  # No hover text for intermediate points
+            text="",
             showlegend=False
         ))
 
@@ -279,7 +279,7 @@ for segment_id, (lon, lat) in city_positions.items():
 for segment_id, (lon, lat) in city_positions.items():
     row = city_pipe_main_valid[city_pipe_main_valid['SegmentID'] == segment_id].iloc[0]
     corrosion_level = row['CorrosionLevel']
-    corrosion_color = corrosion_colors.get(corrosion_level, 'gray')  # Default to gray if no corrosion level
+    corrosion_color = corrosion_colors.get(corrosion_level, 'gray')
     hover_text = "<br>".join([f"{col}: {row[col]}" for col in ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
     fig.add_trace(go.Scattermapbox(
         lon=[lon], lat=[lat], mode='markers',
@@ -292,7 +292,7 @@ for segment_id, (lon, lat) in city_positions.items():
 for segment_id, (lon, lat) in service_positions.items():
     row = service_line_table_valid[service_line_table_valid['SegmentID'] == segment_id].iloc[0]
     corrosion_level = row['CorrosionLevel']
-    corrosion_color = corrosion_colors.get(corrosion_level, 'gray')  # Default to gray if no corrosion level
+    corrosion_color = corrosion_colors.get(corrosion_level, 'gray')
     hover_text = "<br>".join([f"{col}: {row[col]}" for col in ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
     fig.add_trace(go.Scattermapbox(
         lon=[lon], lat=[lat], mode='markers',
@@ -412,7 +412,6 @@ def update_corrosion_and_graph(slider_value):
             showlegend=False
         ))
 
-    # Add dynamically updated city nodes
     for segment_id, (lon, lat) in city_positions.items():
         row = city_pipe_main_valid[city_pipe_main_valid['SegmentID'] == segment_id]
         corrosion_level = row.iloc[0]['CorrosionLevel']
@@ -426,7 +425,6 @@ def update_corrosion_and_graph(slider_value):
             showlegend=False
         ))
 
-    # Add dynamically updated service nodes
     for segment_id, (lon, lat) in service_positions.items():
         row = service_line_table_valid[service_line_table_valid['SegmentID'] == segment_id]
         corrosion_level = row.iloc[0]['CorrosionLevel']
@@ -440,7 +438,6 @@ def update_corrosion_and_graph(slider_value):
             showlegend=False
         ))
 
-    # Update layout
     fig.update_layout(
         mapbox_style="open-street-map",
         mapbox_center={"lon": center_lon, "lat": center_lat},
