@@ -151,18 +151,11 @@ corrosion_filtered = CEval[['SegmentID', 'CorrosionLevel', 'CorrosionRate']]
 # Merge Corrosion data into City_Pipe_Main
 city_pipe_main_merged = pd.merge(city_pipe_main, corrosion_filtered, on='SegmentID', how='left')
 
-# Merge Corrosion data into Service_Line_Table
 service_line_table_merged = pd.merge(service_line_table, corrosion_filtered, on='SegmentID', how='left')
 
-# Save the updated datasets
-city_pipe_main_merged.to_csv('City_Pipe_Main_Updated.csv', index=False)
-service_line_table_merged.to_csv('Service_Line_Table_Updated.csv', index=False)
-
-# Filter rows with valid coordinates
 city_pipe_main_valid = city_pipe_main_merged.dropna(subset=['Latitude', 'Longitude'])
 service_line_table_valid = service_line_table_merged.dropna(subset=['Latitude', 'Longitude'])
 
-# Define color mappings
 corrosion_colors = {1: 'darkgreen', 2: 'lightgreen', 3: 'yellow', 4: 'orange', 5: 'red'}
 direction_colors = {i: f"rgb({(i * 50) % 255}, {(i * 100) % 255}, {(i * 150) % 255})" for i in range(10)}
 
@@ -252,7 +245,7 @@ for edge, hover_text in zip(service_edges, service_edge_hover_texts):
     y_start, y_end = edge[0][1], edge[1][1]
 
     # Create intermediate points along the edge
-    x_points, y_points = generate_intermediate_points(x_start, y_start, x_end, y_end, num_points=10)  # 10 intermediate points
+    x_points, y_points = generate_intermediate_points(x_start, y_start, x_end, y_end, num_points=10)
 
     # Add the edge
     fig.add_trace(go.Scattermapbox(
@@ -329,13 +322,13 @@ def update_corrosion_and_graph(slider_value):
     # Update slider output text
     slider_output = f"Selected corrosion years: {slider_value}"
 
+    # Recalculate corrosion based on slider value
     corrosion_results_df = calculate_corrosion(slider_value)
 
-    # Reload updated datasets
+    # Reload and merge updated datasets
     city_pipe_main_valid = pd.read_csv('City_Pipe_Main_Updated.csv').dropna(subset=['Latitude', 'Longitude'])
     service_line_table_valid = pd.read_csv('Service_Line_Table_Updated.csv').dropna(subset=['Latitude', 'Longitude'])
 
-    # Merge corrosion data for visualization
     city_pipe_main_valid = pd.merge(
         city_pipe_main_valid[['SegmentID', 'Latitude', 'Longitude', 'Parent Pipe']],
         corrosion_results_df[['SegmentID', 'CorrosionLevel', 'CorrosionRate']],
@@ -354,7 +347,7 @@ def update_corrosion_and_graph(slider_value):
     city_edges, city_positions, city_edge_hover_texts = [], {}, []
     service_edges, service_positions, service_edge_hover_texts = [], {}, []
 
-    # Logic for preparing city_edges and service_edges goes here...
+    # Update city edges and nodes dynamically
     for _, row in city_pipe_main_valid.iterrows():
         city_positions[row['SegmentID']] = (row['Longitude'], row['Latitude'])
         corrosion_level = row['CorrosionLevel']
@@ -362,17 +355,18 @@ def update_corrosion_and_graph(slider_value):
 
         if pd.notna(row['Parent Pipe']):
             parent_row = city_pipe_main_valid[city_pipe_main_valid['SegmentID'] == row['Parent Pipe']]
-            # if not parent_row.empty:
-            #     parent_lat, parent_lon = parent_row.iloc[0]['Latitude'], parent_row.iloc[0]['Longitude']
-            #     parent_hover_text = "<br>".join([f"{col}: {parent_row.iloc[0][col]}" for col in
-            #                                      ['Longitude', 'Latitude', city_pipe_main_valid['CorrosionLevel'], 'CorrosionRate']])
-            #     node_hover_text = "<br>".join(
-            #         [f"{col}: {row[col]}" for col in ['Longitude', 'Latitude', city_pipe_main_valid['CorrosionLevel'], 'CorrosionRate']])
-            #
-            #     # Add edge with hover text
-            #     city_edges.append(((parent_lon, parent_lat), (row['Longitude'], row['Latitude']), corrosion_color))
-            #     city_edge_hover_texts.append(f"Start:<br>{parent_hover_text}<br><br>End:<br>{node_hover_text}")
+            if not parent_row.empty:
+                parent_lat, parent_lon = parent_row.iloc[0]['Latitude'], parent_row.iloc[0]['Longitude']
+                parent_hover_text = "<br>".join([f"{col}: {parent_row.iloc[0][col]}" for col in
+                                                 ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
+                node_hover_text = "<br>".join([f"{col}: {row[col]}" for col in
+                                               ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
 
+                # Add edge with hover text
+                city_edges.append(((parent_lon, parent_lat), (row['Longitude'], row['Latitude']), corrosion_color))
+                city_edge_hover_texts.append(f"Start:<br>{parent_hover_text}<br><br>End:<br>{node_hover_text}")
+
+    # Update service edges and nodes dynamically
     for _, row in service_line_table_valid.iterrows():
         service_positions[row['SegmentID']] = (row['Longitude'], row['Latitude'])
         corrosion_level = row['CorrosionLevel']
@@ -383,21 +377,21 @@ def update_corrosion_and_graph(slider_value):
             parent_row_service = service_line_table_valid[service_line_table_valid['SegmentID'] == row['ParentPipe']]
             parent_row = pd.concat([parent_row_main, parent_row_service])
 
-            # if not parent_row.empty:
-            #     parent_lat, parent_lon = parent_row.iloc[0]['Latitude'], parent_row.iloc[0]['Longitude']
-            #     parent_hover_text = "<br>".join([f"{col}: {parent_row.iloc[0][col]}" for col in
-            #                                      ['Longitude', 'Latitude',service_line_table_valid['CorrosionLevel'], 'CorrosionRate']])
-            #     node_hover_text = "<br>".join(
-            #         [f"{col}: {row[col]}" for col in ['Longitude', 'Latitude', service_line_table_valid['CorrosionLevel'], 'CorrosionRate']])
-            #
-            #     # Add edge with hover text
-            #     service_edges.append(((parent_lon, parent_lat), (row['Longitude'], row['Latitude']), corrosion_color))
-            #     service_edge_hover_texts.append(f"Start:<br>{parent_hover_text}<br><br>End:<br>{node_hover_text}")
+            if not parent_row.empty:
+                parent_lat, parent_lon = parent_row.iloc[0]['Latitude'], parent_row.iloc[0]['Longitude']
+                parent_hover_text = "<br>".join([f"{col}: {parent_row.iloc[0][col]}" for col in
+                                                 ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
+                node_hover_text = "<br>".join([f"{col}: {row[col]}" for col in
+                                               ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
 
-    # Create a new figure dynamically
+                # Add edge with hover text
+                service_edges.append(((parent_lon, parent_lat), (row['Longitude'], row['Latitude']), corrosion_color))
+                service_edge_hover_texts.append(f"Start:<br>{parent_hover_text}<br><br>End:<br>{node_hover_text}")
+
+    # Create a new figure
     fig = go.Figure()
 
-    # Add edges and nodes to the figure dynamically
+    # Add edges to the figure
     for edge, hover_text in zip(city_edges, city_edge_hover_texts):
         x_start, x_end = edge[0][0], edge[1][0]
         y_start, y_end = edge[0][1], edge[1][1]
@@ -422,47 +416,35 @@ def update_corrosion_and_graph(slider_value):
             showlegend=False
         ))
 
-    # Add nodes for city and service positions
+    # Add dynamically updated city nodes
     for segment_id, (lon, lat) in city_positions.items():
         row = city_pipe_main_valid[city_pipe_main_valid['SegmentID'] == segment_id]
-        if not row.empty:
-            if isinstance(corrosion_level, pd.Series):
-                corrosion_level = corrosion_level.iloc[0]
-            corrosion_color = corrosion_colors.get(corrosion_level, 'gray')  # Map to color
-            print(row[['CorrosionRate']])
-            print(corrosion_color)
-            hover_text = "<br>".join(
-                [f"{col}: {row.iloc[0][col]}" for col in ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
-            fig.add_trace(go.Scattermapbox(
-                lon=[lon], lat=[lat], mode='markers',
-                marker=dict(size=10, color=corrosion_color),
-                text=hover_text, hoverinfo='text',
-                showlegend=False
-            ))
+        corrosion_level = row.iloc[0]['CorrosionLevel']
+        corrosion_color = corrosion_colors.get(corrosion_level, 'gray')
+        hover_text = "<br>".join([f"{col}: {row.iloc[0][col]}" for col in
+                                  ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
+        fig.add_trace(go.Scattermapbox(
+            lon=[lon], lat=[lat], mode='markers',
+            marker=dict(size=10, color=corrosion_color),
+            text=hover_text, hoverinfo='text',
+            showlegend=False
+        ))
 
+    # Add dynamically updated service nodes
     for segment_id, (lon, lat) in service_positions.items():
         row = service_line_table_valid[service_line_table_valid['SegmentID'] == segment_id]
-        if not row.empty:
-            if isinstance(corrosion_level, pd.Series):
-                corrosion_level = corrosion_level.iloc[0]
-            corrosion_color = corrosion_colors.get(corrosion_level, 'gray')  # Map to color
+        corrosion_level = row.iloc[0]['CorrosionLevel']
+        corrosion_color = corrosion_colors.get(corrosion_level, 'gray')
+        hover_text = "<br>".join([f"{col}: {row.iloc[0][col]}" for col in
+                                  ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
+        fig.add_trace(go.Scattermapbox(
+            lon=[lon], lat=[lat], mode='markers',
+            marker=dict(size=7, color=corrosion_color),
+            text=hover_text, hoverinfo='text',
+            showlegend=False
+        ))
 
-            hover_text = "<br>".join(
-                [f"{col}: {row.iloc[0][col]}" for col in ['Longitude', 'Latitude', 'CorrosionLevel', 'CorrosionRate']])
-            fig.add_trace(go.Scattermapbox(
-                lon=[lon], lat=[lat], mode='markers',
-                marker=dict(size=7, color=corrosion_color),
-                text=hover_text, hoverinfo='text',
-                showlegend=False
-            ))
-
-    # Update figure layout
-    combined_latitudes = pd.concat([city_pipe_main['Latitude'], service_line_table['Latitude']])
-    combined_longitudes = pd.concat([city_pipe_main['Longitude'], service_line_table['Longitude']])
-
-    center_lon = (combined_longitudes.max() + combined_longitudes.min()) / 2
-    center_lat = (combined_latitudes.max() + combined_latitudes.min()) / 2
-
+    # Update layout
     fig.update_layout(
         mapbox_style="open-street-map",
         mapbox_center={"lon": center_lon, "lat": center_lat},
@@ -475,11 +457,12 @@ def update_corrosion_and_graph(slider_value):
 
     return slider_output, fig
 
+
 # Set map layout properties
 fig.update_layout(
     mapbox_style="open-street-map",  # Use Open Street Map as the background
     mapbox_center={"lon": center_lon, "lat": center_lat},
-    mapbox_zoom=18,
+    mapbox_zoom=18.5,
     title="Interactive City Pipe Main and Service Line Connections",
     showlegend=False,
     template="plotly_white",
@@ -489,8 +472,8 @@ fig.update_layout(
 app.layout = html.Div([
     dcc.Slider(0, 80, 1, value=0, id='my-slider'),  # Slider to control corrosion
     html.Div(id='slider-output-container'),  # To display slider output
-    dcc.Graph(id='graph', figure=fig)  # This graph will be updated dynamically
+    dcc.Graph(id='graph', figure=fig, config={'scrollZoom':True})  # This graph will be updated dynamically
 ])
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8052)
+    app.run_server(debug=True, port=8051)
