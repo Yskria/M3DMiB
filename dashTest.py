@@ -231,10 +231,7 @@ for edge, hover_text in zip(city_edges, city_edge_hover_texts):
             lon=[x],
             lat=[y],
             mode='text',
-            text=[hover_text],  # Set the text of the midpoint as the hover_text for both start and end nodes
-            textposition='top center',
-            hoverinfo='text',
-            hoverlabel=dict(bgcolor=edge[2]),
+            text="",  # No hover text for intermediate points
             showlegend=False
         ))
 
@@ -263,10 +260,7 @@ for edge, hover_text in zip(service_edges, service_edge_hover_texts):
             lon=[x],
             lat=[y],
             mode='text',
-            text=[hover_text],  # Set the text of the midpoint as the hover_text for both start and end nodes
-            textposition='top center',
-            hoverinfo='text',
-            hoverlabel=dict(bgcolor=edge[2]),
+            text="",  # No hover text for intermediate points
             showlegend=False
         ))
 
@@ -364,7 +358,8 @@ def update_corrosion_and_graph(slider_value):
 
                 # Add edge with hover text
                 city_edges.append(((parent_lon, parent_lat), (row['Longitude'], row['Latitude']), corrosion_color))
-                city_edge_hover_texts.append(f"Start:<br>{parent_hover_text}<br><br>End:<br>{node_hover_text}")
+                hover_text = f"Start Node:<br>{parent_hover_text}<br><br>End Node:<br>{node_hover_text}"
+                city_edge_hover_texts.append(hover_text)
 
     # Update service edges and nodes dynamically
     for _, row in service_line_table_valid.iterrows():
@@ -386,7 +381,8 @@ def update_corrosion_and_graph(slider_value):
 
                 # Add edge with hover text
                 service_edges.append(((parent_lon, parent_lat), (row['Longitude'], row['Latitude']), corrosion_color))
-                service_edge_hover_texts.append(f"Start:<br>{parent_hover_text}<br><br>End:<br>{node_hover_text}")
+                hover_text = f"Start Node:<br>{parent_hover_text}<br><br>End Node:<br>{node_hover_text}"
+                service_edge_hover_texts.append(hover_text)
 
     # Create a new figure
     fig = go.Figure()
@@ -411,7 +407,7 @@ def update_corrosion_and_graph(slider_value):
             lon=[x_start, x_end],
             lat=[y_start, y_end],
             mode='lines',
-            line=dict(color=edge[2], width=3),
+            line=dict(color=edge[2], width=3),  
             text=hover_text, hoverinfo='text',
             showlegend=False
         ))
@@ -456,7 +452,6 @@ def update_corrosion_and_graph(slider_value):
     )
 
     return slider_output, fig
-
 
 # Set map layout properties
 fig.update_layout(
