@@ -15,14 +15,11 @@ file_paths = {
     "water": 'State_of_Water_Changed.csv'
 }
 
-# Load data
 data = {key: pd.read_csv(path) for key, path in file_paths.items()}
 
-# Normalize function
 def normalize(value, min_val, max_val):
     return (value - min_val) / (max_val - min_val)
 
-# Reset corrosion data
 def reset_corrosion_data():
     original_data = pd.read_csv(file_paths['corrosion'])
     original_data.to_csv(file_paths['simulated_corrosion'], index=False)
@@ -38,7 +35,6 @@ def calculate_corrosion(years):
         segment_id = row['SegmentID']
         old_rate = row['CorrosionRate']
 
-        # Pipe and water data for the current segment
         pipe_data = data['pipe'][data['pipe']['SegmentID'] == segment_id].iloc[0]
         water_data = data['water'][data['water']['SegmentID'] == segment_id].iloc[0]
 
@@ -60,7 +56,6 @@ def calculate_corrosion(years):
 
         mP, mPdev, F, mF, mFdev, fMax = diameter_params[diameter]
 
-        # Normalize parameters
         ranges = {
             "A": (0, 14), "P": (0, 130), "mP": (0, mP), "mPdev": (0, mPdev),
             "T": (5, 15), "X": (2.7, 30.48), "F": (0, fMax), "mF": (0, mF),
@@ -79,7 +74,6 @@ def calculate_corrosion(years):
         S = normalize(S, *ranges["S"])
         I = 0.5
 
-        # Calculation of corrosion rate
         if pipe_data['Pipe Type'] == 'City Pipe Main':
             term1 = 0.16 * (0.3 + (A * (1 + 0.15)))
             term2 = 0.08 * (0.3 + (abs((P - mP)) * (0.6 + (1 / mPdev))))
@@ -98,7 +92,6 @@ def calculate_corrosion(years):
         adjustment = 2.2 * years * (term1 + term2 + term3 + term4 + term5 + term6)
         corrosion_rate = old_rate - adjustment
 
-        # Determine corrosion level
         if 80 <= corrosion_rate <= 100:
             corrosion_level = 1
         elif 60 <= corrosion_rate < 80:
@@ -145,12 +138,11 @@ corrosion_colors = {
 }
 
 def get_corrosion_color(level):
-    return corrosion_colors.get(level, 'gray')  # Default to gray for invalid levels
+    return corrosion_colors.get(level, 'gray')
 
 def generate_edges(city_data, service_data):
     edges, hover_texts = [], []
 
-    # Process City Pipes
     for _, row in city_data.iterrows():
         if pd.notna(row['Parent Pipe']):
             parent_row = city_data[city_data['SegmentID'] == row['Parent Pipe']]
@@ -164,7 +156,6 @@ def generate_edges(city_data, service_data):
                              f"End:<br>Corrosion Level: {row['CorrosionLevel']}"
                 hover_texts.append(hover_text)
 
-    # Process Service Lines
     for _, row in service_data.iterrows():
         if pd.notna(row['ParentPipe']):
             parent_row = service_data[service_data['SegmentID'] == row['ParentPipe']]
@@ -245,10 +236,8 @@ def create_figure(city_data, service_data):
     [Input('my-slider', 'value')]
 )
 def update_graph(year):
-    # Recalculate corrosion based on the selected year
     corrosion_results = calculate_corrosion(year)
 
-    # Merge the recalculated corrosion data with the main and service DataFrames
     main_df = pd.read_csv(file_paths['main'])
     service_df = pd.read_csv(file_paths['service'])
 
@@ -258,7 +247,6 @@ def update_graph(year):
     city_pipe_main_valid = city_pipe_main_merged.dropna(subset=['Latitude', 'Longitude'])
     service_line_table_valid = service_line_table_merged.dropna(subset=['Latitude', 'Longitude'])
 
-    # Output slider value and updated figure
     slider_output = f"Selected corrosion years: {year}"
     figure = create_figure(city_pipe_main_valid, service_line_table_valid)
 
