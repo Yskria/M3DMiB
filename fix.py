@@ -3,10 +3,8 @@ import numpy as np
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output
 
-# Initialize the Dash app
 app = Dash(__name__)
 
-# File paths
 file_paths = {
     "main": 'City_Pipe_Main_Changed.csv',
     "service": 'Service_Line_Table_Changed.csv',
@@ -33,7 +31,6 @@ reset_corrosion_data()
 df_original = pd.read_csv(file_paths['simulated_corrosion'])
 
 def calculate_corrosion(years):
-    # Always start with the original corrosion data
     df_original = pd.read_csv(file_paths['corrosion'])
     corrosion_results = []
 
@@ -51,7 +48,6 @@ def calculate_corrosion(years):
         psi_level = abs(water_data['PSI Level'])
         water_temp = abs(water_data['Water Temperature'])
 
-        # Diameter-specific parameters
         diameter_params = {
             30.48: (100, 100, 4700, 4700, 4700, 5405),
             4.1: (45, 85, 36.3, 36.3, 36.3, 41.75),
@@ -151,8 +147,10 @@ corrosion_colors = {
 def get_corrosion_color(level):
     return corrosion_colors.get(level, 'gray')  # Default to gray for invalid levels
 
-def generate_edges(city_data):
+def generate_edges(city_data, service_data):
     edges, hover_texts = [], []
+
+    # Process City Pipes
     for _, row in city_data.iterrows():
         if pd.notna(row['Parent Pipe']):
             parent_row = city_data[city_data['SegmentID'] == row['Parent Pipe']]
@@ -165,11 +163,26 @@ def generate_edges(city_data):
                 hover_text = f"Start:<br>Corrosion Level: {parent_row.iloc[0]['CorrosionLevel']}<br>" \
                              f"End:<br>Corrosion Level: {row['CorrosionLevel']}"
                 hover_texts.append(hover_text)
+
+    # Process Service Lines
+    for _, row in service_data.iterrows():
+        if pd.notna(row['ParentPipe']):
+            parent_row = service_data[service_data['SegmentID'] == row['ParentPipe']]
+            if not parent_row.empty:
+                parent_lat, parent_lon = parent_row.iloc[0]['Latitude'], parent_row.iloc[0]['Longitude']
+                node_lat, node_lon = row['Latitude'], row['Longitude']
+                corrosion_color = corrosion_colors.get(row['CorrosionLevel'], 'gray')
+                edges.append(((parent_lon, parent_lat), (node_lon, node_lat), corrosion_color))
+
+                hover_text = f"Service Line:<br>Start Corrosion Level: {parent_row.iloc[0]['CorrosionLevel']}<br>" \
+                             f"End Corrosion Level: {row['CorrosionLevel']}"
+                hover_texts.append(hover_text)
+
     return edges, hover_texts
 
-def create_figure(city_data):
+def create_figure(city_data, service_data):
     fig = go.Figure()
-    edges, hover_texts = generate_edges(city_data)
+    edges, hover_texts = generate_edges(city_data, service_data)
 
     for edge, hover_text in zip(edges, hover_texts):
         x_start, x_end = edge[0][0], edge[1][0]
@@ -192,6 +205,17 @@ def create_figure(city_data):
             mode='markers',
             marker=dict(size=10, color=corrosion_color),
             text=f"SegmentID: {row['SegmentID']}<br>Corrosion Level: {row['CorrosionLevel']}",
+            hoverinfo='text'
+        ))
+
+    for _, row in service_data.iterrows():
+        corrosion_color = get_corrosion_color(row['CorrosionLevel'])
+        fig.add_trace(go.Scattermapbox(
+            lon=[row['Longitude']],
+            lat=[row['Latitude']],
+            mode='markers',
+            marker=dict(size=8, color=corrosion_color, symbol='triangle'),
+            text=f"Service Line SegmentID: {row['SegmentID']}<br>Corrosion Level: {row['CorrosionLevel']}",
             hoverinfo='text'
         ))
 
@@ -224,20 +248,26 @@ def update_graph(year):
     # Recalculate corrosion based on the selected year
     corrosion_results = calculate_corrosion(year)
 
-    # Merge the recalculated corrosion data with the main DataFrame
+    # Merge the recalculated corrosion data with the main and service DataFrames
     main_df = pd.read_csv(file_paths['main'])
+    service_df = pd.read_csv(file_paths['service'])
+
     city_pipe_main_merged = pd.merge(main_df, corrosion_results, on='SegmentID', how='left', validate='1:1')
+    service_line_table_merged = pd.merge(service_df, corrosion_results, on='SegmentID', how='left')
+
+    city_pipe_main_valid = city_pipe_main_merged.dropna(subset=['Latitude', 'Longitude'])
+    service_line_table_valid = service_line_table_merged.dropna(subset=['Latitude', 'Longitude'])
 
     # Output slider value and updated figure
     slider_output = f"Selected corrosion years: {year}"
-    figure = create_figure(city_pipe_main_merged)
+    figure = create_figure(city_pipe_main_valid, service_line_table_valid)
 
     return slider_output, figure
 
 app.layout = html.Div([
     dcc.Slider(0, 80, 1, value=0, id='my-slider'), 
     html.Div(id='slider-output-container'),
-    dcc.Graph(id='graph', figure=create_figure(city_pipe_main_merged), config={'scrollZoom': True}) 
+    dcc.Graph(id='graph', figure=create_figure(city_pipe_main_merged, service_line_table_merged), config={'scrollZoom': True}) 
 ])
 
 if __name__ == '__main__':
