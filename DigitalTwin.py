@@ -115,7 +115,6 @@ def calculate_corrosion(years):
 
     return pd.DataFrame(corrosion_results)
 
-
 CEval = pd.read_csv(file_paths['simulated_corrosion'])
 
 corrosion_filtered = CEval[['SegmentID', 'CorrosionLevel', 'CorrosionRate']]
@@ -210,7 +209,6 @@ def create_figure(city_data, service_data):
             hoverinfo='text'
         ))
 
-
     combined_latitudes = pd.concat([city_data['Latitude']])
     combined_longitudes = pd.concat([city_data['Longitude']])
 
@@ -228,7 +226,6 @@ def create_figure(city_data, service_data):
     )
 
     return fig
-
 
 @app.callback(
     [Output('slider-output-container', 'children'),
