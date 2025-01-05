@@ -105,6 +105,7 @@ def calculate_corrosion(years):
         elif corrosion_rate > 100:
             corrosion_level = "Pipe Healed???"
         else:
+            corrosion_level = 6
             corrosion_level = "Pipe corroded."
 
         corrosion_results.append({
@@ -133,7 +134,8 @@ corrosion_colors = {
     2: 'lightgreen',
     3: 'yellow',
     4: 'orange',
-    5: 'red'
+    5: 'red',
+    6: 'black'
 }
 
 def get_corrosion_color(level):
